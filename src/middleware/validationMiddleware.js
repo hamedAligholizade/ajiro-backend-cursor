@@ -48,20 +48,70 @@ const schemas = {
     password: Joi.string().required()
   }),
   
+  // Category schemas
+  categoryCreate: Joi.object({
+    name: Joi.string().max(100).required(),
+    description: Joi.string().allow('', null),
+    parent_id: Joi.string().guid({ version: 'uuidv4' }).allow(null),
+    image_url: Joi.string().uri().allow('', null),
+    is_active: Joi.boolean().default(true)
+  }),
+  
+  categoryUpdate: Joi.object({
+    name: Joi.string().max(100),
+    description: Joi.string().allow('', null),
+    parent_id: Joi.string().guid({ version: 'uuidv4' }).allow(null),
+    image_url: Joi.string().uri().allow('', null),
+    is_active: Joi.boolean()
+  }),
+  
   // Product schemas
   productCreate: Joi.object({
-    name: Joi.string().required(),
-    barcode: Joi.string(),
-    description: Joi.string(),
-    category: Joi.string().required(),
-    price: Joi.number().positive().required(),
-    cost: Joi.number().positive(),
-    tax_rate: Joi.number().min(0),
+    name: Joi.string().max(255).required(),
+    sku: Joi.string().max(50),
+    barcode: Joi.string().max(50),
+    description: Joi.string().allow('', null),
+    category_id: Joi.string().guid({ version: 'uuidv4' }).required(),
+    purchase_price: Joi.number().precision(2).min(0),
+    selling_price: Joi.number().precision(2).min(0).required(),
+    discount_price: Joi.number().precision(2).min(0),
+    is_taxable: Joi.boolean().default(true),
+    tax_rate: Joi.number().precision(2).min(0),
+    image_url: Joi.string().uri().allow('', null),
+    is_active: Joi.boolean().default(true),
+    weight: Joi.number().precision(2).min(0),
+    weight_unit: Joi.string().max(10),
     stock_quantity: Joi.number().integer().min(0).default(0),
-    unit: Joi.string(),
-    status: Joi.string().valid('active', 'inactive').default('active'),
-    imageUrl: Joi.string().uri(),
-    tags: Joi.array().items(Joi.string())
+    reorder_level: Joi.number().integer().min(0),
+    reorder_quantity: Joi.number().integer().min(0),
+    location: Joi.string().max(100)
+  }),
+  
+  productUpdate: Joi.object({
+    name: Joi.string().max(255),
+    sku: Joi.string().max(50),
+    barcode: Joi.string().max(50),
+    description: Joi.string().allow('', null),
+    category_id: Joi.string().guid({ version: 'uuidv4' }),
+    purchase_price: Joi.number().precision(2).min(0),
+    selling_price: Joi.number().precision(2).min(0),
+    discount_price: Joi.number().precision(2).min(0),
+    is_taxable: Joi.boolean(),
+    tax_rate: Joi.number().precision(2).min(0),
+    image_url: Joi.string().uri().allow('', null),
+    is_active: Joi.boolean(),
+    weight: Joi.number().precision(2).min(0),
+    weight_unit: Joi.string().max(10)
+  }),
+  
+  inventoryUpdate: Joi.object({
+    stock_quantity: Joi.number().integer().min(0),
+    available_quantity: Joi.number().integer().min(0),
+    reserved_quantity: Joi.number().integer().min(0),
+    reorder_level: Joi.number().integer().min(0),
+    reorder_quantity: Joi.number().integer().min(0),
+    location: Joi.string().max(100),
+    adjustment_reason: Joi.string()
   }),
   
   // Customer schemas
