@@ -20,25 +20,111 @@ const generateToken = (user, expiresIn = config.jwt.expiresIn) => {
 
 // Generate refresh token
 const generateRefreshToken = (user) => {
-  return jwt.sign(
-    { id: user.id },
-    config.jwt.refreshSecret,
-    { expiresIn: config.jwt.refreshExpiresIn }
-  );
+  const refreshToken = uuidv4();
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+  
+  return {
+    token: refreshToken,
+    expiresAt
+  };
 };
 
 /**
- * Login a user
+ * Register a new user
+ * @route POST /api/auth/register
+ */
+exports.register = async (req, res, next) => {
+  try {
+    const { 
+      email, 
+      password, 
+      first_name, 
+      last_name, 
+      role = 'cashier', 
+      phone 
+    } = req.body;
+
+    // Check if email is already taken
+    const existingUser = await db.User.findOne({ where: { email } });
+    if (existingUser) {
+      return next(new AppError('Email is already in use', 400, 'EMAIL_IN_USE'));
+    }
+
+    // Validate role (only admins can create other admins)
+    if (role === 'admin' && (!req.user || req.user.role !== 'admin')) {
+      return next(new AppError('Only administrators can create admin accounts', 403, 'FORBIDDEN'));
+    }
+
+    // Create new user
+    const user = await db.User.create({
+      email,
+      password_hash: password, // bcrypt hashing is handled in User model hooks
+      first_name,
+      last_name,
+      role,
+      phone,
+      is_active: true
+    });
+
+    // Generate tokens (don't send them for admin-created accounts)
+    let tokens = null;
+    if (!req.user) {
+      // Self-registration
+      const accessToken = generateToken(user);
+      const refreshTokenData = generateRefreshToken(user);
+      
+      // Store refresh token in database
+      await db.UserSession.create({
+        user_id: user.id,
+        token: refreshTokenData.token,
+        ip_address: req.ip,
+        user_agent: req.headers['user-agent'],
+        expires_at: refreshTokenData.expiresAt
+      });
+      
+      tokens = {
+        access_token: accessToken,
+        refresh_token: refreshTokenData.token,
+        expires_in: config.jwt.expiresIn
+      };
+    }
+
+    // Prepare response
+    const userData = {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      role: user.role,
+      is_active: user.is_active
+    };
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        user: userData,
+        ...tokens
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Login user
  * @route POST /api/auth/login
  */
 exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Find user by email
+    // Check if user exists
     const user = await db.User.findOne({ where: { email } });
     if (!user) {
-      return next(new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS'));
+      return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
 
     // Check if user is active
@@ -46,41 +132,41 @@ exports.login = async (req, res, next) => {
       return next(new AppError('Your account has been deactivated', 401, 'ACCOUNT_DEACTIVATED'));
     }
 
-    // Verify password
+    // Check if password is correct
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
-      return next(new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS'));
+      return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
 
-    // Generate access and refresh tokens
+    // Generate tokens
     const accessToken = generateToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    // Store session info
+    const refreshTokenData = generateRefreshToken(user);
+    
+    // Store refresh token in database
     await db.UserSession.create({
       user_id: user.id,
-      token: refreshToken,
+      token: refreshTokenData.token,
       ip_address: req.ip,
       user_agent: req.headers['user-agent'],
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      expires_at: refreshTokenData.expiresAt
     });
-
-    // Update last login time
+    
+    // Update last login timestamp
     await user.update({ last_login_at: new Date() });
 
-    // Return tokens and user info
     res.status(200).json({
       success: true,
       data: {
-        accessToken,
-        refreshToken,
         user: {
           id: user.id,
           email: user.email,
           first_name: user.first_name,
           last_name: user.last_name,
           role: user.role
-        }
+        },
+        access_token: accessToken,
+        refresh_token: refreshTokenData.token,
+        expires_in: config.jwt.expiresIn
       }
     });
   } catch (error) {

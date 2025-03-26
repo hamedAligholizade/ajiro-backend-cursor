@@ -16,12 +16,12 @@ const db = require('./models');
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
-const productRoutes = require('./routes/product.routes');
-const categoryRoutes = require('./routes/category.routes');
-const inventoryRoutes = require('./routes/inventory.routes');
 const customerRoutes = require('./routes/customer.routes');
+const categoryRoutes = require('./routes/category.routes');
+const productRoutes = require('./routes/product.routes');
 const loyaltyRoutes = require('./routes/loyalty.routes');
 const salesRoutes = require('./routes/sales.routes');
+const inventoryRoutes = require('./routes/inventory.routes');
 const reportRoutes = require('./routes/report.routes');
 const feedbackRoutes = require('./routes/feedback.routes');
 
@@ -53,12 +53,12 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/inventory', inventoryRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/products', productRoutes);
 app.use('/api/loyalty', loyaltyRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/feedback', feedbackRoutes);
 

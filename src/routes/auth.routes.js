@@ -1,9 +1,58 @@
 const express = require('express');
 const { validate, schemas } = require('../middleware/validationMiddleware');
 const authController = require('../controllers/auth.controller');
-const { authenticate } = require('../middleware/authMiddleware');
+const { authenticate, restrictTo } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - first_name
+ *               - last_name
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: User's email address
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 description: User's password (min 8 characters)
+ *               first_name:
+ *                 type: string
+ *                 description: User's first name
+ *               last_name:
+ *                 type: string
+ *                 description: User's last name
+ *               phone:
+ *                 type: string
+ *                 description: User's phone number (optional)
+ *               role:
+ *                 type: string
+ *                 enum: [cashier, inventory, marketing]
+ *                 description: User's role (admin/manager role requires admin privileges)
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Validation error or email already in use
+ *       403:
+ *         description: Unauthorized to create admin accounts
+ */
+router.post('/register', validate(schemas.userRegister), authController.register);
 
 /**
  * @swagger

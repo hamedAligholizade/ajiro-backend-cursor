@@ -48,6 +48,15 @@ const schemas = {
     password: Joi.string().required()
   }),
   
+  userRegister: Joi.object({
+    email: Joi.string().email().max(255).required(),
+    password: Joi.string().min(8).required(),
+    first_name: Joi.string().max(100).required(),
+    last_name: Joi.string().max(100).required(),
+    phone: Joi.string().max(20),
+    role: Joi.string().valid('cashier', 'inventory', 'marketing')
+  }),
+  
   // Category schemas
   categoryCreate: Joi.object({
     name: Joi.string().max(100).required(),
@@ -187,19 +196,34 @@ const schemas = {
   
   // Sale schemas
   saleCreate: Joi.object({
-    customer_id: Joi.number().integer(),
+    customer_id: Joi.string().guid({ version: 'uuidv4' }),
     items: Joi.array().items(
       Joi.object({
-        product_id: Joi.number().integer().required(),
-        quantity: Joi.number().positive().required(),
-        price: Joi.number().positive().required(),
-        discount: Joi.number().min(0)
+        product_id: Joi.string().guid({ version: 'uuidv4' }).required(),
+        quantity: Joi.number().integer().min(1).required(),
+        discount_percent: Joi.number().min(0).max(100)
       })
     ).min(1).required(),
-    payment_method: Joi.string().valid('cash', 'card', 'mobile').required(),
-    discount: Joi.number().min(0),
-    tax: Joi.number().min(0),
+    payment_method: Joi.string().valid('cash', 'card', 'mobile', 'credit', 'mixed').required(),
+    discount_amount: Joi.number().precision(2).min(0),
+    loyalty_points_used: Joi.number().integer().min(0),
     notes: Joi.string()
+  }),
+  
+  paymentStatusUpdate: Joi.object({
+    payment_status: Joi.string().valid('paid', 'partial', 'unpaid', 'refunded', 'cancelled').required()
+  }),
+  
+  paymentCreate: Joi.object({
+    amount: Joi.number().precision(2).min(0.01).required(),
+    payment_method: Joi.string().valid('cash', 'card', 'mobile', 'credit', 'mixed').required(),
+    reference_number: Joi.string().max(50)
+  }),
+  
+  refundCreate: Joi.object({
+    amount: Joi.number().precision(2).min(0.01).required(),
+    reason: Joi.string().required(),
+    refund_method: Joi.string().valid('cash', 'card', 'mobile', 'credit', 'mixed')
   }),
   
   // ID parameter
