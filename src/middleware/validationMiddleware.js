@@ -237,10 +237,229 @@ const schemas = {
     limit: Joi.number().integer().min(1).max(100).default(10),
     sort: Joi.string(),
     order: Joi.string().valid('asc', 'desc').default('asc')
+  }),
+
+  // Add order validation schemas
+  orderCreate: Joi.object({
+    customer_id: Joi.string().uuid().required()
+      .messages({
+        'string.empty': 'Customer ID is required',
+        'string.uuid': 'Customer ID must be a valid UUID',
+        'any.required': 'Customer ID is required'
+      }),
+    shipping_address: Joi.string().allow('', null),
+    shipping_method: Joi.string().allow('', null),
+    notes: Joi.string().allow('', null),
+    items: Joi.array().items(
+      Joi.object({
+        product_id: Joi.string().uuid().required()
+          .messages({
+            'string.empty': 'Product ID is required',
+            'string.uuid': 'Product ID must be a valid UUID',
+            'any.required': 'Product ID is required'
+          }),
+        quantity: Joi.number().integer().min(1).required()
+          .messages({
+            'number.base': 'Quantity must be a number',
+            'number.integer': 'Quantity must be an integer',
+            'number.min': 'Quantity must be at least 1',
+            'any.required': 'Quantity is required'
+          })
+      })
+    ).min(1).required()
+      .messages({
+        'array.min': 'At least one item is required',
+        'any.required': 'Items are required'
+      })
+  }),
+
+  orderUpdate: Joi.object({
+    shipping_address: Joi.string().allow('', null),
+    shipping_method: Joi.string().allow('', null),
+    notes: Joi.string().allow('', null)
+  }).min(1)
+    .messages({
+      'object.min': 'At least one field to update is required'
+    }),
+
+  orderStatusUpdate: Joi.object({
+    status: Joi.string().valid('pending', 'processing', 'shipped', 'delivered', 'cancelled').required()
+      .messages({
+        'string.empty': 'Status is required',
+        'string.valid': 'Status must be one of: pending, processing, shipped, delivered, cancelled',
+        'any.required': 'Status is required'
+      }),
+    note: Joi.string().allow('', null)
+  }),
+
+  orderItemCreate: Joi.object({
+    product_id: Joi.string().uuid().required()
+      .messages({
+        'string.empty': 'Product ID is required',
+        'string.uuid': 'Product ID must be a valid UUID',
+        'any.required': 'Product ID is required'
+      }),
+    quantity: Joi.number().integer().min(1).required()
+      .messages({
+        'number.base': 'Quantity must be a number',
+        'number.integer': 'Quantity must be an integer',
+        'number.min': 'Quantity must be at least 1',
+        'any.required': 'Quantity is required'
+      })
+  }),
+
+  orderItemUpdate: Joi.object({
+    quantity: Joi.number().integer().min(1).required()
+      .messages({
+        'number.base': 'Quantity must be a number',
+        'number.integer': 'Quantity must be an integer',
+        'number.min': 'Quantity must be at least 1',
+        'any.required': 'Quantity is required'
+      })
   })
 };
 
+// Feedback validation schemas
+const feedbackFormCreate = Joi.object({
+  title: Joi.string().max(100).required()
+    .messages({
+      'string.empty': 'Form title is required',
+      'string.max': 'Form title cannot exceed 100 characters',
+      'any.required': 'Form title is required'
+    }),
+  description: Joi.string().allow('', null),
+  is_active: Joi.boolean().default(true)
+});
+
+const feedbackFormUpdate = Joi.object({
+  title: Joi.string().max(100)
+    .messages({
+      'string.max': 'Form title cannot exceed 100 characters'
+    }),
+  description: Joi.string().allow('', null),
+  is_active: Joi.boolean()
+}).min(1).messages({
+  'object.min': 'At least one field must be provided for update'
+});
+
+const feedbackQuestionCreate = Joi.object({
+  form_id: Joi.string().uuid().required()
+    .messages({
+      'string.guid': 'Form ID must be a valid UUID',
+      'any.required': 'Form ID is required'
+    }),
+  question_text: Joi.string().required()
+    .messages({
+      'string.empty': 'Question text is required',
+      'any.required': 'Question text is required'
+    }),
+  question_type: Joi.string().valid('rating', 'text', 'multiple_choice', 'checkbox').required()
+    .messages({
+      'string.empty': 'Question type is required',
+      'any.only': 'Question type must be one of: rating, text, multiple_choice, checkbox',
+      'any.required': 'Question type is required'
+    }),
+  options: Joi.when('question_type', {
+    is: Joi.string().valid('multiple_choice', 'checkbox'),
+    then: Joi.array().items(Joi.string()).min(1).required()
+      .messages({
+        'array.min': 'At least one option is required for multiple choice or checkbox questions',
+        'any.required': 'Options are required for multiple choice or checkbox questions'
+      }),
+    otherwise: Joi.alternatives().try(Joi.array().length(0), Joi.valid(null))
+  }),
+  is_required: Joi.boolean().default(true),
+  sequence: Joi.number().integer().min(1).required()
+    .messages({
+      'number.base': 'Sequence must be a number',
+      'number.integer': 'Sequence must be an integer',
+      'number.min': 'Sequence must be a positive number',
+      'any.required': 'Sequence is required'
+    })
+});
+
+const feedbackQuestionUpdate = Joi.object({
+  question_text: Joi.string(),
+  question_type: Joi.string().valid('rating', 'text', 'multiple_choice', 'checkbox')
+    .messages({
+      'any.only': 'Question type must be one of: rating, text, multiple_choice, checkbox'
+    }),
+  options: Joi.when('question_type', {
+    is: Joi.string().valid('multiple_choice', 'checkbox'),
+    then: Joi.array().items(Joi.string()).min(1)
+      .messages({
+        'array.min': 'At least one option is required for multiple choice or checkbox questions'
+      }),
+    otherwise: Joi.alternatives().try(Joi.array().length(0), Joi.valid(null))
+  }),
+  is_required: Joi.boolean(),
+  sequence: Joi.number().integer().min(1)
+    .messages({
+      'number.base': 'Sequence must be a number',
+      'number.integer': 'Sequence must be an integer',
+      'number.min': 'Sequence must be a positive number'
+    })
+}).min(1).messages({
+  'object.min': 'At least one field must be provided for update'
+});
+
+const feedbackResponseCreate = Joi.object({
+  form_id: Joi.string().uuid().required()
+    .messages({
+      'string.guid': 'Form ID must be a valid UUID',
+      'any.required': 'Form ID is required'
+    }),
+  customer_id: Joi.string().uuid().required()
+    .messages({
+      'string.guid': 'Customer ID must be a valid UUID',
+      'any.required': 'Customer ID is required'
+    }),
+  sale_id: Joi.string().uuid().allow(null)
+    .messages({
+      'string.guid': 'Sale ID must be a valid UUID'
+    }),
+  overall_rating: Joi.number().integer().min(1).max(5).allow(null)
+    .messages({
+      'number.base': 'Overall rating must be a number',
+      'number.integer': 'Overall rating must be an integer',
+      'number.min': 'Overall rating must be between 1 and 5',
+      'number.max': 'Overall rating must be between 1 and 5'
+    }),
+  responses: Joi.array().items(
+    Joi.object({
+      question_id: Joi.string().uuid().required()
+        .messages({
+          'string.guid': 'Question ID must be a valid UUID',
+          'any.required': 'Question ID is required'
+        }),
+      answer_text: Joi.string().allow('', null),
+      answer_rating: Joi.number().integer().min(1).max(5).allow(null)
+        .messages({
+          'number.base': 'Rating must be a number',
+          'number.integer': 'Rating must be an integer',
+          'number.min': 'Rating must be between 1 and 5',
+          'number.max': 'Rating must be between 1 and 5'
+        }),
+      answer_options: Joi.alternatives().try(
+        Joi.array().items(Joi.string()),
+        Joi.string(),
+        Joi.valid(null)
+      )
+    })
+  ).min(1).required()
+    .messages({
+      'array.min': 'At least one question response is required',
+      'any.required': 'Question responses are required'
+    })
+});
+
 module.exports = {
   validate,
-  schemas
+  schemas,
+  // Feedback validation schemas
+  feedbackFormCreate,
+  feedbackFormUpdate,
+  feedbackQuestionCreate,
+  feedbackQuestionUpdate,
+  feedbackResponseCreate
 }; 

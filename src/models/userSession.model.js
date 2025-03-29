@@ -76,6 +76,7 @@ module.exports = (sequelize) => {
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: false, // No updated_at timestamp for sessions
+    paranoid: false, // No soft delete for sessions
     
     // Indexes
     indexes: [

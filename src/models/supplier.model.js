@@ -3,9 +3,10 @@ const { DataTypes } = require('sequelize');
 /**
  * Supplier model for supplier management
  * @param {import('sequelize').Sequelize} sequelize - Sequelize instance
+ * @param {import('sequelize/types').DataTypes} DataTypes - Sequelize data types
  * @returns {import('sequelize').Model} - Supplier model
  */
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   /**
    * @swagger
    * components:
@@ -91,11 +92,13 @@ module.exports = (sequelize) => {
 
   // Define associations
   Supplier.associate = (models) => {
-    // Supplier has many PurchaseOrders
-    Supplier.hasMany(models.PurchaseOrder, {
-      foreignKey: 'supplier_id',
-      as: 'purchase_orders'
-    });
+    // Supplier has many PurchaseOrders if the model exists
+    if (models.PurchaseOrder) {
+      Supplier.hasMany(models.PurchaseOrder, {
+        foreignKey: 'supplier_id',
+        as: 'purchase_orders'
+      });
+    }
   };
 
   return Supplier;

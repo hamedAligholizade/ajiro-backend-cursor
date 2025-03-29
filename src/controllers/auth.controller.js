@@ -20,9 +20,18 @@ const generateToken = (user, expiresIn = config.jwt.expiresIn) => {
 
 // Generate refresh token
 const generateRefreshToken = (user) => {
-  const refreshToken = uuidv4();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+  
+  // Create a JWT refresh token instead of UUID
+  const refreshToken = jwt.sign(
+    { 
+      id: user.id,
+      type: 'refresh'
+    },
+    config.jwt.refreshSecret,
+    { expiresIn: config.jwt.refreshExpiresIn }
+  );
   
   return {
     token: refreshToken,
@@ -221,7 +230,7 @@ exports.refreshToken = async (req, res, next) => {
 
     // Update session
     await session.update({
-      token: newRefreshToken,
+      token: newRefreshToken.token,
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
     });
 
@@ -229,7 +238,7 @@ exports.refreshToken = async (req, res, next) => {
       success: true,
       data: {
         accessToken: newAccessToken,
-        refreshToken: newRefreshToken
+        refreshToken: newRefreshToken.token
       }
     });
   } catch (error) {

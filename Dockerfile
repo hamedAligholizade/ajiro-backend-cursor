@@ -1,31 +1,23 @@
-FROM node:20-alpine AS base
+FROM node:20
 
 # Create app directory
 WORKDIR /app
 
-# Install dependencies only when needed
-FROM base AS deps
+# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
-# Rebuild the source code only when needed
-FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
+# Uninstall and reinstall bcrypt with proper compilation
+RUN npm uninstall bcrypt
+RUN npm install bcrypt --build-from-source
+
+# Copy app source
 COPY . .
 
-# Production image, copy all the files and run the app
-FROM base AS runner
-ENV NODE_ENV production
-
-# Run as non-root user for better security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 appuser
-USER appuser
-
-COPY --from=builder --chown=appuser:nodejs /app/package*.json ./
-COPY --from=builder --chown=appuser:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=appuser:nodejs /app/src ./src
+# Make startup script executable
+RUN chmod +x ./startup.sh
 
 EXPOSE 3000
 
-CMD ["node", "src/index.js"] 
+# Use the startup script instead of direct npm run
+CMD ["./startup.sh"] 

@@ -1,12 +1,14 @@
 const { DataTypes } = require('sequelize');
-const bcrypt = require('bcrypt');
+// Use our secure crypto utility instead of bcrypt to avoid compatibility issues
+const passwordHandler = require('../utils/cryptoUtils');
 
 /**
  * User model for staff members and administrators
  * @param {import('sequelize').Sequelize} sequelize - Sequelize instance
+ * @param {import('sequelize/types').DataTypes} DataTypes - Sequelize data types
  * @returns {import('sequelize').Model} - User model
  */
-module.exports = (sequelize) => {
+module.exports = (sequelize, DataTypes) => {
   /**
    * @swagger
    * components:
@@ -113,8 +115,8 @@ module.exports = (sequelize) => {
       beforeSave: async (user) => {
         // Only hash password if it has been modified
         if (user.changed('password_hash')) {
-          const salt = await bcrypt.genSalt(10);
-          user.password_hash = await bcrypt.hash(user.password_hash, salt);
+          const salt = await passwordHandler.genSalt(10);
+          user.password_hash = await passwordHandler.hash(user.password_hash, salt);
         }
       }
     }
@@ -122,7 +124,7 @@ module.exports = (sequelize) => {
   
   // Add instance method to compare passwords
   User.prototype.comparePassword = async function(candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.password_hash);
+    return await passwordHandler.compare(candidatePassword, this.password_hash);
   };
   
   // Add method to safely return user data without password

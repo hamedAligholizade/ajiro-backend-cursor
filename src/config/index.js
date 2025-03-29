@@ -7,8 +7,8 @@ const config = {
   },
   database: {
     url: process.env.DATABASE_URL,
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT, 10) || 5432,
+    host: process.env.DB_HOST || 'postgres',
+    port: process.env.DB_PORT || 5437,
     name: process.env.DB_NAME || 'ajiro',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',

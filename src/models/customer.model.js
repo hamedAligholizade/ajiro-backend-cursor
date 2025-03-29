@@ -130,34 +130,48 @@ module.exports = (sequelize) => {
   // Define associations
   Customer.associate = (models) => {
     // Customer has many Sales
-    Customer.hasMany(models.Sale, {
-      foreignKey: 'customer_id',
-      as: 'sales'
-    });
+    if (models.Sale) {
+      Customer.hasMany(models.Sale, {
+        foreignKey: 'customer_id',
+        as: 'sales'
+      });
+    }
 
     // Customer has many LoyaltyTransactions
-    Customer.hasMany(models.LoyaltyTransaction, {
-      foreignKey: 'customer_id',
-      as: 'loyalty_transactions'
-    });
+    if (models.LoyaltyTransaction) {
+      Customer.hasMany(models.LoyaltyTransaction, {
+        foreignKey: 'customer_id',
+        as: 'loyalty_transactions'
+      });
+    }
 
     // Customer has many LoyaltyRewardRedemptions
-    Customer.hasMany(models.LoyaltyRewardRedemption, {
-      foreignKey: 'customer_id',
-      as: 'reward_redemptions'
-    });
+    if (models.LoyaltyRewardRedemption) {
+      Customer.hasMany(models.LoyaltyRewardRedemption, {
+        foreignKey: 'customer_id',
+        as: 'reward_redemptions'
+      });
+    }
 
+    // We'll implement these models later
+    // These associations are commented out until the models are created
+    /*
     // Customer has many CustomerGroupMembers
-    Customer.hasMany(models.CustomerGroupMember, {
-      foreignKey: 'customer_id',
-      as: 'group_memberships'
-    });
+    if (models.CustomerGroupMember) {
+      Customer.hasMany(models.CustomerGroupMember, {
+        foreignKey: 'customer_id',
+        as: 'group_memberships'
+      });
+    }
 
     // Customer has many FeedbackResponses
-    Customer.hasMany(models.FeedbackResponse, {
-      foreignKey: 'customer_id',
-      as: 'feedback'
-    });
+    if (models.FeedbackResponse) {
+      Customer.hasMany(models.FeedbackResponse, {
+        foreignKey: 'customer_id',
+        as: 'feedback'
+      });
+    }
+    */
   };
 
   // Virtual field for full name

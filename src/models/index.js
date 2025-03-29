@@ -1,4 +1,4 @@
-const { Sequelize } = require('sequelize');
+const { Sequelize, DataTypes } = require('sequelize');
 const config = require('../config');
 const logger = require('../utils/logger');
 const fs = require('fs');
@@ -37,13 +37,38 @@ fs.readdirSync(__dirname)
     return (
       file.indexOf('.') !== 0 &&
       file !== path.basename(__filename) &&
-      file.slice(-9) === '.model.js'
+      (file.slice(-9) === '.model.js' || file.slice(-3) === '.js')
     );
   })
   .forEach(file => {
-    const model = require(path.join(__dirname, file))(sequelize);
-    db[model.name] = model;
+    // Skip index.js itself
+    if (file === 'index.js') return;
+    
+    try {
+      const model = require(path.join(__dirname, file))(sequelize, DataTypes);
+      db[model.name] = model;
+    } catch (error) {
+      logger.error(`Error loading model file ${file}:`, error);
+    }
   });
+
+// Import models
+db.User = require('./user.model')(sequelize, DataTypes);
+db.Customer = require('./customer.model')(sequelize, DataTypes);
+db.Category = require('./category.model')(sequelize, DataTypes);
+db.Product = require('./product.model')(sequelize, DataTypes);
+db.Inventory = require('./inventory.model')(sequelize, DataTypes);
+db.LoyaltyProgram = require('./loyaltyProgram.model')(sequelize, DataTypes);
+db.LoyaltyTransaction = require('./loyaltyTransaction.model')(sequelize, DataTypes);
+db.Sale = require('./sale.model')(sequelize, DataTypes);
+db.SaleItem = require('./saleItem.model')(sequelize, DataTypes);
+db.Order = require('./order.model')(sequelize, DataTypes);
+db.OrderItem = require('./orderItem.model')(sequelize, DataTypes);
+db.OrderStatusHistory = require('./orderStatusHistory.model')(sequelize, DataTypes);
+db.FeedbackForm = require('./feedback-form.model')(sequelize, DataTypes);
+db.FeedbackQuestion = require('./feedback-question.model')(sequelize, DataTypes);
+db.FeedbackResponse = require('./feedback-response.model')(sequelize, DataTypes);
+db.FeedbackResponseDetail = require('./feedback-response-detail.model')(sequelize, DataTypes);
 
 // Add the sequelize instance and Sequelize class to db
 db.sequelize = sequelize;
@@ -52,7 +77,11 @@ db.Sequelize = Sequelize;
 // Call associate function on each model (if it exists)
 Object.keys(db).forEach(modelName => {
   if (db[modelName].associate) {
-    db[modelName].associate(db);
+    try {
+      db[modelName].associate(db);
+    } catch (error) {
+      logger.error(`Error associating model ${modelName}:`, error);
+    }
   }
 });
 
