@@ -54,7 +54,8 @@ const schemas = {
     first_name: Joi.string().max(100).required(),
     last_name: Joi.string().max(100).required(),
     phone: Joi.string().max(20),
-    role: Joi.string().valid('cashier', 'inventory', 'marketing')
+    shop_name: Joi.string().max(100).required(),
+    role: Joi.string().valid('cashier', 'inventory', 'marketing', 'manager').optional()
   }),
   
   // Category schemas

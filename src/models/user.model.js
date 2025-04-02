@@ -139,5 +139,22 @@ module.exports = (sequelize, DataTypes) => {
     return `${this.first_name} ${this.last_name}`;
   };
   
+  // Add associate method for user model to set up relationships
+  User.associate = (models) => {
+    // A user can own multiple shops
+    User.hasMany(models.Shop, {
+      foreignKey: 'owner_id',
+      as: 'ownedShops'
+    });
+    
+    // A user can have access to multiple shops through UserShop
+    User.belongsToMany(models.Shop, {
+      through: models.UserShop,
+      foreignKey: 'user_id',
+      otherKey: 'shop_id',
+      as: 'shops'
+    });
+  };
+  
   return User;
 }; 

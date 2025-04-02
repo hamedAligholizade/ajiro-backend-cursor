@@ -6,12 +6,51 @@ const db = require('../models');
 const logger = require('../utils/logger');
 
 // Generate JWT token
-const generateToken = (user, expiresIn = config.jwt.expiresIn) => {
+const generateToken = async (user, expiresIn = config.jwt.expiresIn) => {
+  // Get user's primary shop (owned shop or first accessible shop)
+  let primaryShop = null;
+  
+  // Check for owned shops first
+  const ownedShop = await db.Shop.findOne({
+    where: {
+      owner_id: user.id,
+      is_active: true
+    }
+  });
+  
+  if (ownedShop) {
+    primaryShop = {
+      id: ownedShop.id,
+      name: ownedShop.name
+    };
+  } else {
+    // Look for shops the user has access to
+    const userShop = await db.UserShop.findOne({
+      where: {
+        user_id: user.id,
+        is_active: true
+      },
+      include: [{
+        model: db.Shop,
+        as: 'shop'
+      }]
+    });
+    
+    if (userShop && userShop.shop) {
+      primaryShop = {
+        id: userShop.shop.id,
+        name: userShop.shop.name
+      };
+    }
+  }
+  
+  // Include primary shop info in the token if available
   return jwt.sign(
     { 
       id: user.id,
       email: user.email,
-      role: user.role
+      role: user.role,
+      shop: primaryShop
     },
     config.jwt.secret,
     { expiresIn }
@@ -49,9 +88,9 @@ exports.register = async (req, res, next) => {
       email, 
       password, 
       first_name, 
-      last_name, 
-      role = 'cashier', 
-      phone 
+      last_name,
+      phone,
+      shop_name
     } = req.body;
 
     // Check if email is already taken
@@ -59,6 +98,11 @@ exports.register = async (req, res, next) => {
     if (existingUser) {
       return next(new AppError('Email is already in use', 400, 'EMAIL_IN_USE'));
     }
+
+    // Set role based on who is registering
+    // If it's self-registration (no authenticated user), set role to manager
+    // If an admin is creating a user, they can specify the role
+    const role = !req.user ? 'manager' : (req.body.role || 'cashier');
 
     // Validate role (only admins can create other admins)
     if (role === 'admin' && (!req.user || req.user.role !== 'admin')) {
@@ -76,11 +120,29 @@ exports.register = async (req, res, next) => {
       is_active: true
     });
 
+    // If this is self-registration, create a shop for the user
+    let shop = null;
+    if (!req.user && shop_name) {
+      shop = await db.Shop.create({
+        name: shop_name,
+        owner_id: user.id,
+        is_active: true
+      });
+
+      // Create user-shop association
+      await db.UserShop.create({
+        user_id: user.id,
+        shop_id: shop.id,
+        permissions: { permissions: ["all"] },  // Simple JSON structure
+        is_active: true
+      });
+    }
+
     // Generate tokens (don't send them for admin-created accounts)
     let tokens = null;
     if (!req.user) {
       // Self-registration
-      const accessToken = generateToken(user);
+      const accessToken = await generateToken(user);
       const refreshTokenData = generateRefreshToken(user);
       
       // Store refresh token in database
@@ -109,11 +171,18 @@ exports.register = async (req, res, next) => {
       is_active: user.is_active
     };
 
+    // Add shop data to response if a shop was created
+    const shopData = shop ? {
+      id: shop.id,
+      name: shop.name,
+    } : null;
+
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       data: {
         user: userData,
+        shop: shopData,
         ...tokens
       }
     });
@@ -147,8 +216,35 @@ exports.login = async (req, res, next) => {
       return next(new AppError('Invalid credentials', 401, 'INVALID_CREDENTIALS'));
     }
 
+    // Get user's primary shop
+    const ownedShop = await db.Shop.findOne({
+      where: {
+        owner_id: user.id,
+        is_active: true
+      }
+    });
+
+    // If user doesn't own a shop, check for shops they have access to
+    let shop = ownedShop;
+    if (!shop) {
+      const userShop = await db.UserShop.findOne({
+        where: {
+          user_id: user.id,
+          is_active: true
+        },
+        include: [{
+          model: db.Shop,
+          as: 'shop'
+        }]
+      });
+      
+      if (userShop && userShop.shop) {
+        shop = userShop.shop;
+      }
+    }
+
     // Generate tokens
-    const accessToken = generateToken(user);
+    const accessToken = await generateToken(user);
     const refreshTokenData = generateRefreshToken(user);
     
     // Store refresh token in database
@@ -173,6 +269,10 @@ exports.login = async (req, res, next) => {
           last_name: user.last_name,
           role: user.role
         },
+        shop: shop ? {
+          id: shop.id,
+          name: shop.name
+        } : null,
         access_token: accessToken,
         refresh_token: refreshTokenData.token,
         expires_in: config.jwt.expiresIn
@@ -225,7 +325,7 @@ exports.refreshToken = async (req, res, next) => {
     }
 
     // Generate new tokens
-    const newAccessToken = generateToken(user);
+    const newAccessToken = await generateToken(user);
     const newRefreshToken = generateRefreshToken(user);
 
     // Update session
@@ -359,4 +459,4 @@ exports.resetPassword = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-}; 
+};

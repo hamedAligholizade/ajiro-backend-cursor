@@ -35,20 +35,69 @@ async function initMigrationTable() {
   }
 }
 
+// Clear all existing tables for a fresh start
+async function clearDatabase() {
+  try {
+    // Drop all tables except the migrations table
+    await sequelize.query(`
+      DO $$ DECLARE
+        r RECORD;
+      BEGIN
+        FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = current_schema() AND tablename != '${migrationsTable}') LOOP
+          EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+        END LOOP;
+      END $$;
+    `);
+    
+    // Clear migrations table
+    await sequelize.query(`DELETE FROM ${migrationsTable}`);
+    
+    logger.info('Database cleared successfully');
+  } catch (error) {
+    logger.error('Error clearing database:', error);
+    throw error;
+  }
+}
+
 // Gets the list of migration files from the directory
 function getMigrationFiles() {
   try {
-    // Get all JS files in the migrations directory
-    const files = fs.readdirSync(migrationPath)
+    // Define a specific order for migrations to handle dependencies
+    const orderedMigrations = [
+      // Core schema first
+      '20250328000000-initialize-schema.js',
+      // User and customer tables (authentication related)
+      '20250328000001-create-user-and-customer-tables.js',
+      // Base data models
+      '20250328000000-create-product-tables.js',
+      '20250328000010-create-order-tables.js',
+      '20250328000020-create-shop-tables.js',
+      // Additional features
+      '20250328000002-create-feedback-tables.js',
+      '20250328000003-create-feedback-tables-manual.js',
+      '20250328000004-create-order-tables-manual.js',
+      '20250328000005-create-feedback-models.js'
+    ];
+    
+    // Get all migration files that exist in the directory
+    const allFiles = fs.readdirSync(migrationPath)
       .filter(file => 
         file.endsWith('.js') && 
         file !== path.basename(__filename) && 
-        file !== 'migration-template.js' &&
-        file === '20250328000000-initialize-schema.js'
-      )
-      .sort(); // Sort alphabetically to maintain order
+        file !== 'migration-template.js'
+      );
     
-    return files;
+    // Log which files were found
+    logger.info(`Found migration files: ${allFiles.join(', ')}`);
+    
+    // Get only the migration files that exist in our ordered list
+    const validOrderedMigrations = orderedMigrations.filter(file => allFiles.includes(file));
+    
+    // Add any additional migrations not in our ordered list (at the end)
+    const additionalMigrations = allFiles.filter(file => !orderedMigrations.includes(file));
+    
+    // Return the combined list (ordered migrations first, then any others)
+    return [...validOrderedMigrations, ...additionalMigrations];
   } catch (error) {
     logger.error('Error getting migration files:', error);
     throw error;
@@ -116,7 +165,7 @@ async function executeMigration(file, direction = 'up') {
 }
 
 // Main migration function
-async function migrate(direction = 'up') {
+async function migrate(direction = 'up', shouldClearDatabase = false) {
   try {
     // Connect to the database
     await sequelize.authenticate();
@@ -125,11 +174,19 @@ async function migrate(direction = 'up') {
     // Initialize migrations table
     await initMigrationTable();
     
+    // Clear the database if requested (careful with this in production!)
+    if (shouldClearDatabase && direction === 'up') {
+      logger.warn('Clearing database before migrations...');
+      await clearDatabase();
+    }
+    
     // Get migration files
     const migrationFiles = getMigrationFiles();
+    logger.info(`Migration files to process: ${migrationFiles.join(', ')}`);
     
     // Get executed migrations
     const executedMigrations = await getExecutedMigrations();
+    logger.info(`Already executed migrations: ${executedMigrations.join(', ')}`);
     
     // Determine pending migrations based on direction
     let pendingMigrations = [];
@@ -163,7 +220,7 @@ async function migrate(direction = 'up') {
       return;
     }
     
-    logger.info(`Found ${pendingMigrations.length} pending migrations for ${direction} direction`);
+    logger.info(`Found ${pendingMigrations.length} pending migrations for ${direction} direction: ${pendingMigrations.join(', ')}`);
     
     // Execute each pending migration
     for (const file of pendingMigrations) {
@@ -183,7 +240,9 @@ async function migrate(direction = 'up') {
 // Command line interface
 if (require.main === module) {
   const direction = process.argv[2] === 'down' ? 'down' : 'up';
-  migrate(direction).catch(err => {
+  const clearDb = process.argv.includes('--clear');
+  
+  migrate(direction, clearDb).catch(err => {
     logger.error('Migration script error:', err);
     process.exit(1);
   });
