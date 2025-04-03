@@ -11,23 +11,64 @@ const validate = (schema, source = 'body') => {
   return (req, res, next) => {
     const data = req[source];
     
-    const { error, value } = schema.validate(data, {
-      abortEarly: false,
-      stripUnknown: true,
-      errors: {
-        wrap: {
-          label: false
+    // Check if it's a Joi schema or a simple object schema
+    if (schema && typeof schema.validate === 'function') {
+      // It's a Joi schema
+      const { error, value } = schema.validate(data, {
+        abortEarly: false,
+        stripUnknown: true,
+        errors: {
+          wrap: {
+            label: false
+          }
         }
+      });
+      
+      if (error) {
+        const errorMessage = error.details.map(detail => detail.message).join(', ');
+        return next(new AppError(errorMessage, 400, 'VALIDATION_ERROR'));
       }
-    });
-    
-    if (error) {
-      const errorMessage = error.details.map(detail => detail.message).join(', ');
-      return next(new AppError(errorMessage, 400, 'VALIDATION_ERROR'));
+      
+      // Replace request data with validated data
+      req[source] = value;
+      return next();
+    } else if (schema && typeof schema === 'object') {
+      // It's a simple object schema
+      const errors = [];
+      const validatedData = {};
+      
+      // Simple validation for object schemas
+      Object.keys(schema).forEach(key => {
+        const field = schema[key];
+        const value = data[key];
+        
+        if (field.required && (value === undefined || value === null || value === '')) {
+          errors.push(`${key} is required`);
+        } else if (value !== undefined) {
+          // Type validation
+          if (field.type === 'string' && typeof value !== 'string') {
+            errors.push(`${key} must be a string`);
+          } else if (field.type === 'number' && (typeof value !== 'number' && isNaN(Number(value)))) {
+            errors.push(`${key} must be a number`);
+          } else if (field.type === 'boolean' && typeof value !== 'boolean') {
+            errors.push(`${key} must be a boolean`);
+          } else {
+            // Add validated value
+            validatedData[key] = field.type === 'number' ? Number(value) : value;
+          }
+        }
+      });
+      
+      if (errors.length > 0) {
+        return next(new AppError(errors.join(', '), 400, 'VALIDATION_ERROR'));
+      }
+      
+      // Merge validated data with original request
+      req[source] = { ...data, ...validatedData };
+      return next();
     }
     
-    // Replace request data with validated data
-    req[source] = value;
+    // No schema provided or invalid schema
     return next();
   };
 };
@@ -317,6 +358,28 @@ const schemas = {
         'number.min': 'Quantity must be at least 1',
         'any.required': 'Quantity is required'
       })
+  }),
+
+  // Shop schemas
+  shopUpdate: Joi.object({
+    name: Joi.string().max(100),
+    description: Joi.string().allow('', null),
+    business_type: Joi.string().max(50),
+    address: Joi.string().max(255),
+    phone: Joi.string().max(20),
+    tax_enabled: Joi.boolean(),
+    tax_rate: Joi.number().precision(2).min(0).max(100),
+    currency: Joi.string().max(10)
+  }),
+
+  taxSettings: Joi.object({
+    tax_enabled: Joi.boolean(),
+    tax_rate: Joi.number().precision(2).min(0).max(100),
+    currency: Joi.string().max(10)
+  }),
+  
+  uuidParam: Joi.object({
+    userId: Joi.string().guid({ version: 'uuidv4' }).required()
   })
 };
 
@@ -454,6 +517,80 @@ const feedbackResponseCreate = Joi.object({
     })
 });
 
+// Shop user validation schema
+const shopUserAdd = Joi.object({
+  email: Joi.string().email().required().messages({
+    'string.email': 'Please provide a valid email address',
+    'any.required': 'Email is required'
+  }),
+  password: Joi.string().min(8).required().messages({
+    'string.min': 'Password must be at least 8 characters long',
+    'any.required': 'Password is required'
+  }),
+  first_name: Joi.string().required().messages({
+    'any.required': 'First name is required'
+  }),
+  last_name: Joi.string().required().messages({
+    'any.required': 'Last name is required'
+  }),
+  phone: Joi.string().allow('', null),
+  role: Joi.string().valid('cashier', 'inventory', 'marketing', 'manager').default('cashier')
+});
+
+// UUID parameter validation
+const uuidParam = Joi.object({
+  id: Joi.string().guid({ version: 'uuidv4' }).required().messages({
+    'string.guid': 'ID must be a valid UUID',
+    'any.required': 'ID is required'
+  })
+});
+
+// Shop settings schema
+const shopUpdate = Joi.object({
+  name: Joi.string().max(100),
+  address: Joi.string(),
+  city: Joi.string().max(100),
+  postal_code: Joi.string().max(20),
+  phone: Joi.string().max(20),
+  email: Joi.string().email(),
+  website: Joi.string().uri().allow('', null),
+  currency: Joi.string().max(3),
+  tax_settings: Joi.object()
+});
+
+// Tax settings schema
+const taxSettings = Joi.object({
+  enabled: Joi.boolean().default(false),
+  default_rate: Joi.number().precision(2).min(0).max(100),
+  tax_number: Joi.string().allow('', null),
+  tax_name: Joi.string().max(50).allow('', null)
+});
+
+// Unit schemas
+const unitCreate = Joi.object({
+  name: Joi.string().max(50).required().messages({
+    'string.max': 'Unit name cannot exceed 50 characters',
+    'any.required': 'Unit name is required'
+  }),
+  abbreviation: Joi.string().max(10).required().messages({
+    'string.max': 'Unit abbreviation cannot exceed 10 characters',
+    'any.required': 'Unit abbreviation is required'
+  }),
+  is_default: Joi.boolean().default(false),
+  conversion_factor: Joi.number().precision(4).min(0).default(1)
+});
+
+const unitUpdate = Joi.object({
+  name: Joi.string().max(50).messages({
+    'string.max': 'Unit name cannot exceed 50 characters'
+  }),
+  abbreviation: Joi.string().max(10).messages({
+    'string.max': 'Unit abbreviation cannot exceed 10 characters'
+  }),
+  is_default: Joi.boolean(),
+  conversion_factor: Joi.number().precision(4).min(0)
+});
+
 module.exports = {
   validate,
   schemas,
@@ -462,5 +599,14 @@ module.exports = {
   feedbackFormUpdate,
   feedbackQuestionCreate,
   feedbackQuestionUpdate,
-  feedbackResponseCreate
+  feedbackResponseCreate,
+  // Add shop user validation schemas
+  shopUserAdd,
+  uuidParam,
+  // Shop settings schemas
+  shopUpdate,
+  taxSettings,
+  // Unit schemas
+  unitCreate,
+  unitUpdate
 }; 

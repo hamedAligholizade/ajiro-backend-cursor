@@ -37,6 +37,9 @@ module.exports = (sequelize) => {
    *           type: string
    *           format: uuid
    *           description: ID of the product category
+   *         unit_id:
+   *           type: integer
+   *           description: ID of the measurement unit
    *         purchase_price:
    *           type: number
    *           format: decimal
@@ -107,6 +110,14 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
+    unit_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'units',
+        key: 'id'
+      }
+    },
     purchase_price: {
       type: DataTypes.DECIMAL(12, 2)
     },
@@ -153,6 +164,12 @@ module.exports = (sequelize) => {
     Product.belongsTo(models.Category, {
       foreignKey: 'category_id',
       as: 'category'
+    });
+
+    // Product belongs to Unit (if defined)
+    Product.belongsTo(models.Unit, {
+      foreignKey: 'unit_id',
+      as: 'unit'
     });
 
     // Product has one Inventory

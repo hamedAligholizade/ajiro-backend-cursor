@@ -60,11 +60,15 @@ module.exports = {
         type: DataTypes.STRING(50),
         allowNull: true
       },
-      price: {
+      selling_price: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: false
       },
-      cost_price: {
+      purchase_price: {
+        type: DataTypes.DECIMAL(12, 2),
+        allowNull: true
+      },
+      discount_price: {
         type: DataTypes.DECIMAL(12, 2),
         allowNull: true
       },
@@ -89,6 +93,26 @@ module.exports = {
       is_active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true
+      },
+      is_taxable: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+      },
+      tax_rate: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: true
+      },
+      image_url: {
+        type: DataTypes.TEXT,
+        allowNull: true
+      },
+      weight: {
+        type: DataTypes.DECIMAL(8, 2),
+        allowNull: true
+      },
+      weight_unit: {
+        type: DataTypes.STRING(10),
+        allowNull: true
       },
       created_at: {
         type: DataTypes.DATE,

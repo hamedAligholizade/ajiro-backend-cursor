@@ -98,7 +98,7 @@ router.get('/:id', validate(schemas.idParam, 'params'), categoryController.getCa
  * @swagger
  * /api/categories:
  *   post:
- *     summary: Create a new category
+ *     summary: Create a new product category
  *     tags: [Categories]
  *     security:
  *       - bearerAuth: []
@@ -117,26 +117,17 @@ router.get('/:id', validate(schemas.idParam, 'params'), categoryController.getCa
  *               description:
  *                 type: string
  *                 description: Category description
- *               parent_id:
- *                 type: string
- *                 format: uuid
- *                 description: Parent category ID (optional)
- *               image_url:
- *                 type: string
- *                 format: uri
- *                 description: URL to category image
- *               is_active:
- *                 type: boolean
- *                 description: Whether the category is active
  *     responses:
  *       201:
  *         description: Category created successfully
  *       400:
- *         description: Validation error or duplicate category
- *       404:
- *         description: Parent category not found
+ *         description: Invalid request data
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not admin or manager
  */
-router.post('/', 
+router.post('/',
   restrictTo('admin', 'manager'),
   validate(schemas.categoryCreate),
   categoryController.createCategory
@@ -146,7 +137,7 @@ router.post('/',
  * @swagger
  * /api/categories/{id}:
  *   put:
- *     summary: Update a category
+ *     summary: Update a product category
  *     tags: [Categories]
  *     security:
  *       - bearerAuth: []
@@ -155,8 +146,7 @@ router.post('/',
  *         name: id
  *         required: true
  *         schema:
- *           type: string
- *           format: uuid
+ *           type: integer
  *         description: Category ID
  *     requestBody:
  *       required: true
@@ -171,27 +161,19 @@ router.post('/',
  *               description:
  *                 type: string
  *                 description: Category description
- *               parent_id:
- *                 type: string
- *                 format: uuid
- *                 description: Parent category ID
- *               image_url:
- *                 type: string
- *                 format: uri
- *                 description: URL to category image
- *               is_active:
- *                 type: boolean
- *                 description: Whether the category is active
  *     responses:
  *       200:
  *         description: Category updated successfully
  *       400:
- *         description: Validation error, duplicate category, or circular reference
+ *         description: Invalid request data
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not admin or manager
  *       404:
- *         description: Category or parent category not found
+ *         description: Category not found
  */
-router.put('/:id', 
-  validate(schemas.idParam, 'params'),
+router.put('/:id',
   restrictTo('admin', 'manager'),
   validate(schemas.categoryUpdate),
   categoryController.updateCategory
@@ -201,7 +183,7 @@ router.put('/:id',
  * @swagger
  * /api/categories/{id}:
  *   delete:
- *     summary: Delete a category
+ *     summary: Delete a product category
  *     tags: [Categories]
  *     security:
  *       - bearerAuth: []
@@ -210,19 +192,19 @@ router.put('/:id',
  *         name: id
  *         required: true
  *         schema:
- *           type: string
- *           format: uuid
+ *           type: integer
  *         description: Category ID
  *     responses:
  *       200:
  *         description: Category deleted successfully
- *       400:
- *         description: Cannot delete category with subcategories or products
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not admin or manager
  *       404:
  *         description: Category not found
  */
-router.delete('/:id', 
-  validate(schemas.idParam, 'params'),
+router.delete('/:id',
   restrictTo('admin', 'manager'),
   categoryController.deleteCategory
 );

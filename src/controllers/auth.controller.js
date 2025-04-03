@@ -259,6 +259,29 @@ exports.login = async (req, res, next) => {
     // Update last login timestamp
     await user.update({ last_login_at: new Date() });
 
+    // Create safe shop object with tax settings
+    let shopResponse = null;
+    if (shop) {
+      try {
+        shopResponse = {
+          id: shop.id,
+          name: shop.name,
+          tax_enabled: shop.tax_enabled === undefined ? true : shop.tax_enabled,
+          tax_rate: shop.tax_rate || 9.00,
+          currency: shop.currency || 'تومان'
+        };
+      } catch (shopError) {
+        console.error('Error extracting shop data:', shopError);
+        shopResponse = {
+          id: shop.id,
+          name: shop.name,
+          tax_enabled: true,
+          tax_rate: 9.00,
+          currency: 'تومان'
+        };
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -269,10 +292,7 @@ exports.login = async (req, res, next) => {
           last_name: user.last_name,
           role: user.role
         },
-        shop: shop ? {
-          id: shop.id,
-          name: shop.name
-        } : null,
+        shop: shopResponse,
         access_token: accessToken,
         refresh_token: refreshTokenData.token,
         expires_in: config.jwt.expiresIn

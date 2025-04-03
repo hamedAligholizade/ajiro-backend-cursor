@@ -108,6 +108,7 @@ module.exports = (sequelize) => {
     timestamps: true,
     createdAt: false, // No created_at timestamp for inventory
     updatedAt: 'updated_at',
+    paranoid: false, // Explicitly disable soft deletes since we don't have deleted_at column
     
     // Hooks
     hooks: {

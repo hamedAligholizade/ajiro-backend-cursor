@@ -6,11 +6,13 @@ const morgan = require('morgan');
 const { rateLimit } = require('express-rate-limit');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
+const path = require('path');
 
 // Import local modules
 const config = require('./config');
 const logger = require('./utils/logger');
 const { errorHandler } = require('./middleware/errorHandler');
+const { staticWithCors } = require('./middleware/staticMiddleware');
 const db = require('./models');
 
 // Import routes
@@ -25,17 +27,25 @@ const inventoryRoutes = require('./routes/inventory.routes');
 const reportRoutes = require('./routes/report.routes');
 const feedbackRoutes = require('./routes/feedback.routes');
 const orderRoutes = require('./routes/order.routes');
+const shopRoutes = require('./routes/shop.routes');
+const unitRoutes = require('./routes/unit.routes');
+const uploadRoutes = require('./routes/upload.routes');
 
 // Initialize express app
 const app = express();
 
 // Set up middleware
 app.use(cors(config.cors));
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+
+// Serve static files from the uploads directory with CORS headers
+app.use('/uploads', ...staticWithCors('/uploads', path.join(__dirname, '../uploads')));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -63,6 +73,9 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/shop', shopRoutes);
+app.use('/api/units', unitRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

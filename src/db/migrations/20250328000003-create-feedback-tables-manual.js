@@ -3,6 +3,8 @@
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     // Use raw SQL for creating tables to avoid DataTypes issues
+    
+    // First create the feedback_forms table
     await queryInterface.sequelize.query(`
       CREATE TABLE IF NOT EXISTS feedback_forms (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -12,9 +14,26 @@ module.exports = {
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
-      
-      CREATE TYPE feedback_question_type AS ENUM ('rating', 'text', 'multiple_choice', 'checkbox');
-      
+    `);
+    
+    // Check if the enum type already exists and create it if not
+    try {
+      await queryInterface.sequelize.query(`
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'feedback_question_type') THEN
+            CREATE TYPE feedback_question_type AS ENUM ('rating', 'text', 'multiple_choice', 'checkbox');
+          END IF;
+        END
+        $$;
+      `);
+    } catch (error) {
+      console.log('Error checking/creating enum type:', error);
+      // Continue with migration even if this fails
+    }
+    
+    // Create the remaining tables
+    await queryInterface.sequelize.query(`
       CREATE TABLE IF NOT EXISTS feedback_questions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         form_id UUID NOT NULL REFERENCES feedback_forms(id) ON UPDATE CASCADE ON DELETE CASCADE,

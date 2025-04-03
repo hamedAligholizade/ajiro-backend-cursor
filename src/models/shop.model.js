@@ -85,6 +85,18 @@ module.exports = (sequelize, DataTypes) => {
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
+    },
+    tax_enabled: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
+    },
+    tax_rate: {
+      type: DataTypes.DECIMAL(5, 2),
+      defaultValue: 9.00
+    },
+    currency: {
+      type: DataTypes.STRING(10),
+      defaultValue: 'تومان'
     }
   }, {
     tableName: 'shops',

@@ -88,6 +88,7 @@ module.exports = (sequelize) => {
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: false, // No updated_at timestamp for transactions
+    paranoid: false, // Explicitly disable soft deletes
     
     // Indexes
     indexes: [

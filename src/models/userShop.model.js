@@ -68,6 +68,11 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    role: {
+      type: DataTypes.ENUM('admin', 'manager', 'cashier', 'inventory', 'marketing'),
+      allowNull: false,
+      defaultValue: 'cashier'
+    },
     permissions: {
       type: DataTypes.JSON, // Store array of permission strings
       defaultValue: []
@@ -82,6 +87,21 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at'
   });
+  
+  // Add associate method for UserShop model to set up relationships
+  UserShop.associate = (models) => {
+    // UserShop belongs to a User
+    UserShop.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'User'
+    });
+    
+    // UserShop belongs to a Shop
+    UserShop.belongsTo(models.Shop, {
+      foreignKey: 'shop_id',
+      as: 'Shop'
+    });
+  };
   
   return UserShop;
 }; 

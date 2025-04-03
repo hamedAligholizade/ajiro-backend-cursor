@@ -46,6 +46,21 @@ module.exports = {
         type: DataTypes.STRING(20),
         allowNull: true
       },
+      tax_enabled: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+        allowNull: false
+      },
+      tax_rate: {
+        type: DataTypes.DECIMAL(5, 2),
+        defaultValue: 9.00,
+        allowNull: false
+      },
+      currency: {
+        type: DataTypes.STRING(10),
+        defaultValue: 'تومان',
+        allowNull: false
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: false

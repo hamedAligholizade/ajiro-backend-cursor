@@ -71,6 +71,7 @@ db.FeedbackResponse = require('./feedback-response.model')(sequelize, DataTypes)
 db.FeedbackResponseDetail = require('./feedback-response-detail.model')(sequelize, DataTypes);
 db.Shop = require('./shop.model')(sequelize, DataTypes);
 db.UserShop = require('./userShop.model')(sequelize, DataTypes);
+db.Unit = require('./unit.model')(sequelize, DataTypes);
 
 // Add the sequelize instance and Sequelize class to db
 db.sequelize = sequelize;

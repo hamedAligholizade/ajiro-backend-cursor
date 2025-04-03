@@ -14,8 +14,14 @@ module.exports = {
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
       
-      -- Create the question type enum
-      CREATE TYPE feedback_question_type AS ENUM ('rating', 'text', 'multiple_choice', 'checkbox');
+      -- Create the question type enum if it doesn't exist
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'feedback_question_type') THEN
+          CREATE TYPE feedback_question_type AS ENUM ('rating', 'text', 'multiple_choice', 'checkbox');
+        END IF;
+      END
+      $$;
       
       -- Create the feedback_questions table
       CREATE TABLE IF NOT EXISTS feedback_questions (
