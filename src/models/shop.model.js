@@ -112,6 +112,30 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'owner_id',
       as: 'owner'
     });
+    
+    // A shop has many categories
+    Shop.hasMany(models.Category, {
+      foreignKey: 'shop_id',
+      as: 'categories'
+    });
+    
+    // A shop has many products
+    Shop.hasMany(models.Product, {
+      foreignKey: 'shop_id',
+      as: 'products'
+    });
+    
+    // A shop has many inventory items
+    Shop.hasMany(models.Inventory, {
+      foreignKey: 'shop_id',
+      as: 'inventory'
+    });
+    
+    // A shop has many staff members
+    Shop.hasMany(models.ShopStaff, {
+      foreignKey: 'shop_id',
+      as: 'staff'
+    });
   };
   
   return Shop;

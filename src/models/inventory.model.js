@@ -14,6 +14,7 @@ module.exports = (sequelize) => {
    *       type: object
    *       required:
    *         - product_id
+   *         - shop_id
    *         - stock_quantity
    *         - available_quantity
    *         - reserved_quantity
@@ -26,6 +27,10 @@ module.exports = (sequelize) => {
    *           type: string
    *           format: uuid
    *           description: ID of the product this inventory belongs to
+   *         shop_id:
+   *           type: string
+   *           format: uuid
+   *           description: ID of the shop this inventory belongs to
    *         stock_quantity:
    *           type: integer
    *           description: Total stock quantity
@@ -58,9 +63,16 @@ module.exports = (sequelize) => {
     product_id: {
       type: DataTypes.UUID,
       allowNull: false,
-      unique: true,
       references: {
         model: 'products',
+        key: 'id'
+      }
+    },
+    shop_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'shops',
         key: 'id'
       }
     },
@@ -129,6 +141,12 @@ module.exports = (sequelize) => {
     Inventory.belongsTo(models.Product, {
       foreignKey: 'product_id',
       as: 'product'
+    });
+    
+    // Inventory belongs to Shop
+    Inventory.belongsTo(models.Shop, {
+      foreignKey: 'shop_id',
+      as: 'shop'
     });
   };
 

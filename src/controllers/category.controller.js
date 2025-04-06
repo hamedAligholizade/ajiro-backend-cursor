@@ -11,12 +11,22 @@ exports.getAllCategories = async (req, res, next) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 100; // Higher default limit for categories
     const offset = (page - 1) * limit;
+    
+    // Get shop_id from request (set by shopAccess middleware)
+    const shopId = req.shop?.id || req.query.shop_id;
+    
+    if (!shopId) {
+      return next(new AppError('Shop ID is required', 400, 'SHOP_ID_REQUIRED'));
+    }
 
     // Build query with filtering options
     const query = {
+      where: {
+        shop_id: shopId
+      },
       attributes: [
         'id', 'name', 'description', 'parent_id', 'image_url', 
-        'is_active', 'created_at', 'updated_at'
+        'is_active', 'created_at', 'updated_at', 'shop_id'
       ],
       limit,
       offset,
@@ -26,6 +36,7 @@ exports.getAllCategories = async (req, res, next) => {
     // Add search filter if provided
     if (req.query.search) {
       query.where = {
+        ...query.where,
         [Op.or]: [
           { name: { [Op.iLike]: `%${req.query.search}%` } },
           { description: { [Op.iLike]: `%${req.query.search}%` } }
@@ -81,12 +92,25 @@ exports.getAllCategories = async (req, res, next) => {
  */
 exports.getCategoryById = async (req, res, next) => {
   try {
-    const category = await db.Category.findByPk(req.params.id, {
+    // Get shop_id from request (set by shopAccess middleware)
+    const shopId = req.shop?.id || req.query.shop_id;
+    
+    if (!shopId) {
+      return next(new AppError('Shop ID is required', 400, 'SHOP_ID_REQUIRED'));
+    }
+    
+    const category = await db.Category.findOne({
+      where: {
+        id: req.params.id,
+        shop_id: shopId
+      },
       include: [
         {
           model: db.Category,
           as: 'subcategories',
-          attributes: ['id', 'name', 'description', 'is_active', 'image_url']
+          where: { shop_id: shopId },
+          attributes: ['id', 'name', 'description', 'is_active', 'image_url', 'shop_id'],
+          required: false
         }
       ]
     });
@@ -97,7 +121,10 @@ exports.getCategoryById = async (req, res, next) => {
 
     // Get product count for this category
     const productCount = await db.Product.count({
-      where: { category_id: req.params.id }
+      where: { 
+        category_id: req.params.id,
+        shop_id: shopId
+      }
     });
 
     // Augment response with product count
@@ -165,20 +192,34 @@ exports.getCategoryHierarchy = async (req, res, next) => {
 exports.createCategory = async (req, res, next) => {
   try {
     const { name, description, parent_id, image_url, is_active } = req.body;
+    
+    // Get shop_id from request (set by shopAccess middleware)
+    const shopId = req.shop?.id || req.body.shop_id;
+    
+    if (!shopId) {
+      return next(new AppError('Shop ID is required', 400, 'SHOP_ID_REQUIRED'));
+    }
 
-    // Check if parent exists if provided
+    // Check if parent exists if provided and belongs to the same shop
     if (parent_id) {
-      const parentCategory = await db.Category.findByPk(parent_id);
+      const parentCategory = await db.Category.findOne({
+        where: {
+          id: parent_id,
+          shop_id: shopId
+        }
+      });
+      
       if (!parentCategory) {
-        return next(new AppError('Parent category not found', 404, 'PARENT_CATEGORY_NOT_FOUND'));
+        return next(new AppError('Parent category not found or does not belong to this shop', 404, 'PARENT_CATEGORY_NOT_FOUND'));
       }
     }
 
-    // Check if name already exists at same level
+    // Check if name already exists at same level for this shop
     const existingCategory = await db.Category.findOne({
       where: {
         name,
-        parent_id: parent_id || null
+        parent_id: parent_id || null,
+        shop_id: shopId
       }
     });
 
@@ -191,6 +232,7 @@ exports.createCategory = async (req, res, next) => {
       name,
       description,
       parent_id,
+      shop_id: shopId,
       image_url,
       is_active: is_active !== undefined ? is_active : true
     });

@@ -16,6 +16,7 @@ module.exports = (sequelize) => {
    *         - name
    *         - selling_price
    *         - category_id
+   *         - shop_id
    *       properties:
    *         id:
    *           type: string
@@ -37,6 +38,10 @@ module.exports = (sequelize) => {
    *           type: string
    *           format: uuid
    *           description: ID of the product category
+   *         shop_id:
+   *           type: string
+   *           format: uuid
+   *           description: ID of the shop this product belongs to
    *         unit_id:
    *           type: integer
    *           description: ID of the measurement unit
@@ -110,6 +115,14 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
+    shop_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'shops',
+        key: 'id'
+      }
+    },
     unit_id: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -164,6 +177,12 @@ module.exports = (sequelize) => {
     Product.belongsTo(models.Category, {
       foreignKey: 'category_id',
       as: 'category'
+    });
+
+    // Product belongs to Shop
+    Product.belongsTo(models.Shop, {
+      foreignKey: 'shop_id',
+      as: 'shop'
     });
 
     // Product belongs to Unit (if defined)

@@ -177,8 +177,15 @@ exports.createProduct = async (req, res, next) => {
       name, sku, barcode, description, category_id, purchase_price,
       selling_price, discount_price, is_taxable, tax_rate, image_url,
       is_active, weight, weight_unit, stock_quantity, reorder_level,
-      reorder_quantity, location
+      reorder_quantity, location, shop_id
     } = req.body;
+
+    // Ensure shop_id is set (either from body or from request shop context)
+    const productShopId = shop_id || (req.shop && req.shop.id);
+    
+    if (!productShopId) {
+      return next(new AppError('Shop ID is required', 400, 'SHOP_ID_REQUIRED'));
+    }
 
     // Check if sku already exists
     if (sku) {
@@ -211,6 +218,7 @@ exports.createProduct = async (req, res, next) => {
         barcode,
         description,
         category_id,
+        shop_id: productShopId,
         purchase_price,
         selling_price,
         discount_price,
@@ -226,6 +234,7 @@ exports.createProduct = async (req, res, next) => {
       const inventoryQuantity = stock_quantity || 0;
       await db.Inventory.create({
         product_id: product.id,
+        shop_id: productShopId,
         stock_quantity: inventoryQuantity,
         available_quantity: inventoryQuantity,
         reserved_quantity: 0,
@@ -238,6 +247,7 @@ exports.createProduct = async (req, res, next) => {
       if (inventoryQuantity > 0) {
         await db.InventoryTransaction.create({
           product_id: product.id,
+          shop_id: productShopId,
           quantity: inventoryQuantity,
           transaction_type: 'purchase',
           note: 'Initial stock',
@@ -417,6 +427,12 @@ exports.updateInventory = async (req, res, next) => {
     } = req.body;
 
     const productId = req.params.id;
+    // Get shop_id from request context or body
+    const shopId = req.shop?.id || req.body.shop_id;
+
+    if (!shopId) {
+      return next(new AppError('Shop ID is required', 400, 'SHOP_ID_REQUIRED'));
+    }
 
     // Check if product exists
     const product = await db.Product.findByPk(productId);
@@ -429,6 +445,7 @@ exports.updateInventory = async (req, res, next) => {
       where: { product_id: productId },
       defaults: {
         product_id: productId,
+        shop_id: shopId, // Add shop_id to defaults
         stock_quantity: 0,
         available_quantity: 0,
         reserved_quantity: 0
@@ -659,6 +676,98 @@ exports.getProductSalesStats = async (req, res, next) => {
           period_days: days
         },
         daily_sales: dailySales
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Adjust product stock quantity
+ * @route POST /api/products/:id/adjust-stock
+ */
+exports.adjustStock = async (req, res, next) => {
+  try {
+    const { quantity, note } = req.body;
+    const productId = req.params.id;
+    // Get shop_id from request context or body
+    const shopId = req.shop?.id || req.body.shop_id;
+
+    if (!shopId) {
+      return next(new AppError('Shop ID is required', 400, 'SHOP_ID_REQUIRED'));
+    }
+
+    // Validate quantity
+    if (!quantity || isNaN(parseInt(quantity))) {
+      return next(new AppError('Quantity must be a valid number', 400, 'INVALID_QUANTITY'));
+    }
+    
+    const adjustQuantity = parseInt(quantity);
+
+    // Get product
+    const product = await db.Product.findByPk(productId);
+    if (!product) {
+      return next(new AppError('Product not found', 404, 'PRODUCT_NOT_FOUND'));
+    }
+
+    // Start transaction
+    const result = await db.sequelize.transaction(async (t) => {
+      // Find or create inventory
+      let [inventory] = await db.Inventory.findOrCreate({
+        where: { product_id: productId },
+        defaults: {
+          product_id: productId,
+          shop_id: shopId, // Add shop_id here
+          stock_quantity: 0,
+          available_quantity: 0,
+          reserved_quantity: 0
+        },
+        transaction: t
+      });
+      
+      // Update quantities
+      const newStockQuantity = inventory.stock_quantity + adjustQuantity;
+      const newAvailableQuantity = inventory.available_quantity + adjustQuantity;
+      
+      // Don't allow negative stock (unless it's a return/adjustment)
+      if (newStockQuantity < 0 || newAvailableQuantity < 0) {
+        throw new AppError('Insufficient stock for adjustment', 400, 'INSUFFICIENT_STOCK');
+      }
+      
+      // Update inventory
+      await inventory.update({
+        stock_quantity: newStockQuantity,
+        available_quantity: newAvailableQuantity
+      }, { transaction: t });
+      
+      // Create inventory transaction record
+      await db.InventoryTransaction.create({
+        product_id: productId,
+        shop_id: shopId, // Add shop_id here too
+        quantity: adjustQuantity,
+        transaction_type: adjustQuantity > 0 ? 'adjustment_in' : 'adjustment_out',
+        note: note || 'Manual stock adjustment',
+        user_id: req.user.id
+      }, { transaction: t });
+      
+      return inventory;
+    });
+
+    // Get updated inventory with product
+    const updatedInventory = await db.Inventory.findOne({
+      where: { product_id: productId },
+      include: [{
+        model: db.Product,
+        as: 'product',
+        attributes: ['id', 'name', 'sku']
+      }]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        inventory: updatedInventory
       }
     });
   } catch (error) {

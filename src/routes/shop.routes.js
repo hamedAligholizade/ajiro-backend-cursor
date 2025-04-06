@@ -9,6 +9,22 @@ router.use(authenticate);
 
 /**
  * @swagger
+ * /api/shop/all:
+ *   get:
+ *     summary: Get all shops the current user has access to
+ *     tags: [Shop]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of accessible shops
+ *       401:
+ *         description: Unauthorized
+ */
+router.get('/all', shopController.getUserShops);
+
+/**
+ * @swagger
  * /api/shop:
  *   get:
  *     summary: Get current user's shop details

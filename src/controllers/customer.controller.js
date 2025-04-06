@@ -145,7 +145,7 @@ exports.createCustomer = async (req, res, next) => {
     const customer = await db.Customer.create({
       first_name,
       last_name,
-      email,
+      email: email || null,  // Explicitly set email to null if not provided
       phone,
       birth_date,
       address,
@@ -207,7 +207,7 @@ exports.updateCustomer = async (req, res, next) => {
     await customer.update({
       first_name: first_name || customer.first_name,
       last_name: last_name || customer.last_name,
-      email: email || customer.email,
+      email: email === undefined ? customer.email : email || null,
       phone: phone || customer.phone,
       birth_date: birth_date !== undefined ? birth_date : customer.birth_date,
       address: address !== undefined ? address : customer.address,

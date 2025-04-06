@@ -2,11 +2,15 @@ const express = require('express');
 const { validate, schemas } = require('../middleware/validationMiddleware');
 const categoryController = require('../controllers/category.controller');
 const { authenticate, restrictTo } = require('../middleware/authMiddleware');
+const { setShopContext, verifyShopAccess } = require('../middleware/shopAccess');
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Set shop context for all routes
+router.use(setShopContext);
 
 /**
  * @swagger
@@ -17,6 +21,13 @@ router.use(authenticate);
  *     security:
  *       - bearerAuth: []
  *     parameters:
+ *       - in: query
+ *         name: shop_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Shop ID
  *       - in: query
  *         name: page
  *         schema:
@@ -64,6 +75,14 @@ router.get('/', categoryController.getAllCategories);
  *     tags: [Categories]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: shop_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Shop ID
  *     responses:
  *       200:
  *         description: Hierarchical category structure
@@ -86,6 +105,13 @@ router.get('/hierarchy', categoryController.getCategoryHierarchy);
  *           type: string
  *           format: uuid
  *         description: Category ID
+ *       - in: query
+ *         name: shop_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Shop ID
  *     responses:
  *       200:
  *         description: Category details with subcategories
@@ -110,6 +136,7 @@ router.get('/:id', validate(schemas.idParam, 'params'), categoryController.getCa
  *             type: object
  *             required:
  *               - name
+ *               - shop_id
  *             properties:
  *               name:
  *                 type: string
@@ -117,6 +144,10 @@ router.get('/:id', validate(schemas.idParam, 'params'), categoryController.getCa
  *               description:
  *                 type: string
  *                 description: Category description
+ *               shop_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Shop ID
  *     responses:
  *       201:
  *         description: Category created successfully
@@ -129,6 +160,7 @@ router.get('/:id', validate(schemas.idParam, 'params'), categoryController.getCa
  */
 router.post('/',
   restrictTo('admin', 'manager'),
+  verifyShopAccess(),  // Verify user has access to the shop
   validate(schemas.categoryCreate),
   categoryController.createCategory
 );
@@ -154,6 +186,8 @@ router.post('/',
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - shop_id
  *             properties:
  *               name:
  *                 type: string
@@ -161,6 +195,10 @@ router.post('/',
  *               description:
  *                 type: string
  *                 description: Category description
+ *               shop_id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Shop ID
  *     responses:
  *       200:
  *         description: Category updated successfully
@@ -175,6 +213,7 @@ router.post('/',
  */
 router.put('/:id',
   restrictTo('admin', 'manager'),
+  verifyShopAccess(),  // Verify user has access to the shop
   validate(schemas.categoryUpdate),
   categoryController.updateCategory
 );
@@ -194,6 +233,13 @@ router.put('/:id',
  *         schema:
  *           type: integer
  *         description: Category ID
+ *       - in: query
+ *         name: shop_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Shop ID
  *     responses:
  *       200:
  *         description: Category deleted successfully
@@ -206,6 +252,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   restrictTo('admin', 'manager'),
+  verifyShopAccess(),  // Verify user has access to the shop
   categoryController.deleteCategory
 );
 

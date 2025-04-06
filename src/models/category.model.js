@@ -14,6 +14,7 @@ module.exports = (sequelize) => {
    *       type: object
    *       required:
    *         - name
+   *         - shop_id
    *       properties:
    *         id:
    *           type: string
@@ -30,6 +31,10 @@ module.exports = (sequelize) => {
    *           format: uuid
    *           nullable: true
    *           description: ID of parent category for hierarchical categorization
+   *         shop_id:
+   *           type: string
+   *           format: uuid
+   *           description: The shop this category belongs to
    *         image_url:
    *           type: string
    *           description: URL to category image
@@ -65,6 +70,14 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
+    shop_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'shops',
+        key: 'id'
+      }
+    },
     image_url: {
       type: DataTypes.TEXT
     },
@@ -89,6 +102,12 @@ module.exports = (sequelize) => {
     Category.belongsTo(models.Category, { 
       foreignKey: 'parent_id', 
       as: 'parent' 
+    });
+    
+    // Category belongs to Shop
+    Category.belongsTo(models.Shop, {
+      foreignKey: 'shop_id',
+      as: 'shop'
     });
   };
 

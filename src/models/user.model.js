@@ -154,6 +154,12 @@ module.exports = (sequelize, DataTypes) => {
       otherKey: 'shop_id',
       as: 'shops'
     });
+    
+    // A user can be staff in multiple shops
+    User.hasMany(models.ShopStaff, {
+      foreignKey: 'user_id',
+      as: 'staffMemberships'
+    });
   };
   
   return User;

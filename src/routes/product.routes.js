@@ -2,11 +2,15 @@ const express = require('express');
 const { validate, schemas } = require('../middleware/validationMiddleware');
 const productController = require('../controllers/product.controller');
 const { authenticate, restrictTo } = require('../middleware/authMiddleware');
+const { setShopContext } = require('../middleware/shopAccess');
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Apply setShopContext middleware to all product routes
+router.use(setShopContext);
 
 /**
  * @swagger
