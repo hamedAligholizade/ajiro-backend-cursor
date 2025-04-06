@@ -456,4 +456,48 @@ exports.getCustomerPurchases = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+/**
+ * Get customer by phone number
+ * @route GET /api/customers/search
+ */
+exports.getCustomerByPhone = async (req, res, next) => {
+  try {
+    const { phone } = req.query;
+
+    if (!phone) {
+      return next(new AppError('Phone number is required', 400, 'PHONE_REQUIRED'));
+    }
+
+    // Check if a shop_id is available from the middleware or request
+    const shop_id = req.body.shop_id || req.query.shop_id || (req.user && req.user.active_shop_id);
+
+    // Build the query
+    const query = {
+      where: { phone }
+    };
+
+    // If shop_id is available, add it to the query
+    if (shop_id) {
+      query.where.shop_id = shop_id;
+    }
+
+    const customer = await db.Customer.findOne(query);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: 'No customer found with this phone number',
+        customer: null
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      customer
+    });
+  } catch (error) {
+    next(error);
+  }
 }; 

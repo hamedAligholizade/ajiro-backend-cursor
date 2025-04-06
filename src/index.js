@@ -12,7 +12,9 @@ const path = require('path');
 const config = require('./config');
 const logger = require('./utils/logger');
 const { errorHandler } = require('./middleware/errorHandler');
+const { authenticate: authenticateJWT } = require('./middleware/authMiddleware');
 const { staticWithCors } = require('./middleware/staticMiddleware');
+const ensureShopId = require('./middleware/ensureShopId');
 const db = require('./models');
 
 // Import routes
@@ -64,18 +66,21 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
-app.use('/api/customers', customerRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/loyalty', loyaltyRoutes);
-app.use('/api/sales', salesRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/feedback', feedbackRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/shop', shopRoutes);
-app.use('/api/units', unitRoutes);
-app.use('/api/upload', uploadRoutes);
+
+// Apply ensureShopId middleware to routes that need shop_id
+app.use('/api/customers', authenticateJWT, ensureShopId, customerRoutes);
+app.use('/api/categories', authenticateJWT, ensureShopId, categoryRoutes);
+app.use('/api/products', authenticateJWT, ensureShopId, productRoutes);
+app.use('/api/loyalty', authenticateJWT, ensureShopId, loyaltyRoutes);
+app.use('/api/sales', authenticateJWT, ensureShopId, salesRoutes);
+app.use('/api/inventory', authenticateJWT, ensureShopId, inventoryRoutes);
+app.use('/api/reports', authenticateJWT, ensureShopId, reportRoutes);
+app.use('/api/feedback', authenticateJWT, ensureShopId, feedbackRoutes);
+app.use('/api/orders', authenticateJWT, ensureShopId, orderRoutes);
+app.use('/api/shops', authenticateJWT, shopRoutes);
+app.use('/api/units', authenticateJWT, ensureShopId, unitRoutes);
+app.use('/api/uploads', authenticateJWT, ensureShopId, uploadRoutes);
+app.use('/api/shop', authenticateJWT, shopRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

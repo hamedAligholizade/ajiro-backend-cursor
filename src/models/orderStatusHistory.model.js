@@ -72,7 +72,8 @@ module.exports = (sequelize) => {
     tableName: 'order_status_history',
     timestamps: true,
     createdAt: 'created_at',
-    updatedAt: false // No updated_at for status history
+    updatedAt: false, // No updated_at for status history
+    paranoid: false,
   });
 
   // Define associations

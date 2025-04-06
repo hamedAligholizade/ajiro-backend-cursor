@@ -17,6 +17,7 @@ module.exports = (sequelize) => {
    *         - order_date
    *         - total_amount
    *         - payment_status
+   *         - shop_id
    *       properties:
    *         id:
    *           type: string
@@ -29,6 +30,10 @@ module.exports = (sequelize) => {
    *           type: string
    *           format: uuid
    *           description: ID of the customer who placed the order
+   *         shop_id:
+   *           type: string
+   *           format: uuid
+   *           description: ID of the shop this order belongs to
    *         status:
    *           type: string
    *           enum: [pending, processing, shipped, delivered, cancelled]
@@ -37,6 +42,10 @@ module.exports = (sequelize) => {
    *           type: string
    *           format: date-time
    *           description: When the order was placed
+   *         delivery_date:
+   *           type: string
+   *           format: date-time
+   *           description: When the order was delivered
    *         total_amount:
    *           type: number
    *           format: float
@@ -84,6 +93,14 @@ module.exports = (sequelize) => {
         key: 'id'
       }
     },
+    shop_id: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: 'shops',
+        key: 'id'
+      }
+    },
     status: {
       type: DataTypes.ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled'),
       allowNull: false,
@@ -93,6 +110,10 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW
+    },
+    delivery_date: {
+      type: DataTypes.DATE,
+      allowNull: true
     },
     total_amount: {
       type: DataTypes.DECIMAL(12, 2),
@@ -121,6 +142,7 @@ module.exports = (sequelize) => {
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    paranoid: false,
     
     // Hooks
     hooks: {
@@ -142,6 +164,14 @@ module.exports = (sequelize) => {
       Order.belongsTo(models.Customer, {
         foreignKey: 'customer_id',
         as: 'customer'
+      });
+    }
+    
+    // Order belongs to Shop
+    if (models.Shop) {
+      Order.belongsTo(models.Shop, {
+        foreignKey: 'shop_id',
+        as: 'shop'
       });
     }
 

@@ -30,7 +30,7 @@ module.exports = (sequelize) => {
    *           description: Quantity change
    *         transaction_type:
    *           type: string
-   *           enum: [purchase, sale, return, adjustment, transfer]
+   *           enum: [purchase, sale, return, adjustment, transfer, delivery]
    *           description: Type of transaction
    *         reference_id:
    *           type: string
@@ -67,7 +67,7 @@ module.exports = (sequelize) => {
       allowNull: false
     },
     transaction_type: {
-      type: DataTypes.ENUM('purchase', 'sale', 'return', 'adjustment', 'transfer'),
+      type: DataTypes.ENUM('purchase', 'sale', 'return', 'adjustment', 'transfer', 'delivery'),
       allowNull: false
     },
     reference_id: {

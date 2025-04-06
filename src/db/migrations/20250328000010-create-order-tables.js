@@ -23,6 +23,16 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL'
       },
+      shop_id: {
+        type: Sequelize.DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: 'shops',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
+      },
       status: {
         type: Sequelize.DataTypes.ENUM('pending', 'processing', 'shipped', 'delivered', 'cancelled'),
         allowNull: false,
@@ -32,6 +42,10 @@ module.exports = {
         type: Sequelize.DataTypes.DATE,
         allowNull: false,
         defaultValue: Sequelize.DataTypes.NOW
+      },
+      delivery_date: {
+        type: Sequelize.DataTypes.DATE,
+        allowNull: true
       },
       total_amount: {
         type: Sequelize.DataTypes.DECIMAL(12, 2),

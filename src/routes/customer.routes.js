@@ -60,6 +60,29 @@ router.get('/', customerController.getAllCustomers);
 
 /**
  * @swagger
+ * /api/customers/search:
+ *   get:
+ *     summary: Find customer by phone number
+ *     tags: [Customers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: phone
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Phone number to search
+ *     responses:
+ *       200:
+ *         description: Customer found
+ *       404:
+ *         description: No customer found with this phone number
+ */
+router.get('/search', customerController.getCustomerByPhone);
+
+/**
+ * @swagger
  * /api/customers/{id}:
  *   get:
  *     summary: Get customer details

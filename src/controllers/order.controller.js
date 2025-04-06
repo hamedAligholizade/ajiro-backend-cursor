@@ -143,13 +143,38 @@ exports.createOrder = async (req, res, next) => {
   const transaction = await db.sequelize.transaction();
   
   try {
-    const { customer_id, shipping_address, shipping_method, items, notes } = req.body;
+    const { 
+      customer_id, 
+      shop_id, 
+      shipping_address, 
+      shipping_method, 
+      items, 
+      notes, 
+      payment_method,
+      status = 'pending' 
+    } = req.body;
+    
+    // Validate required shop_id
+    if (!shop_id) {
+      await transaction.rollback();
+      return next(new AppError('Shop ID is required', 400, 'SHOP_ID_REQUIRED'));
+    }
+    
+    // Check if shop exists
+    const shop = await db.Shop.findByPk(shop_id);
+    if (!shop) {
+      await transaction.rollback();
+      return next(new AppError('Shop not found', 404, 'SHOP_NOT_FOUND'));
+    }
     
     // Check if customer exists
-    const customer = await db.Customer.findByPk(customer_id);
-    if (!customer) {
-      await transaction.rollback();
-      return next(new AppError('Customer not found', 404, 'CUSTOMER_NOT_FOUND'));
+    let customer = null;
+    if (customer_id) {
+      customer = await db.Customer.findByPk(customer_id);
+      if (!customer) {
+        await transaction.rollback();
+        return next(new AppError('Customer not found', 404, 'CUSTOMER_NOT_FOUND'));
+      }
     }
     
     // Check if products exist and have enough stock
@@ -194,16 +219,24 @@ exports.createOrder = async (req, res, next) => {
       totalAmount += parseFloat(product.selling_price) * item.quantity;
     }
     
+    // Generate unique order number
+    const timestamp = Date.now().toString().substring(4);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const order_number = `ORD-${timestamp}-${random}`;
+    
     // Create order
     const order = await db.Order.create({
       customer_id,
+      shop_id,
       shipping_address,
       shipping_method,
       notes,
       total_amount: totalAmount,
-      status: 'pending',
+      status: status || 'pending',
       payment_status: 'pending',
-      order_date: new Date()
+      payment_method: payment_method || 'cash',
+      order_date: new Date(),
+      order_number
     }, { transaction });
     
     // Create order items
@@ -249,7 +282,10 @@ exports.createOrder = async (req, res, next) => {
       status: 'pending',
       note: 'Order created',
       user_id: req.user.id
-    }, { transaction });
+    }, { 
+      transaction,
+      paranoid: false
+    });
     
     await transaction.commit();
     
@@ -351,7 +387,7 @@ exports.updateOrderStatus = async (req, res, next) => {
     }
     
     // Handle special cases
-    if (status === 'cancelled' && ['pending', 'processing'].includes(order.status)) {
+    if (status === 'cancelled' && ['pending', 'processing', 'shipped'].includes(order.status)) {
       // Return reserved items to available inventory
       for (const item of order.items) {
         await db.Inventory.update(
@@ -375,8 +411,16 @@ exports.updateOrderStatus = async (req, res, next) => {
           user_id: req.user.id
         }, { transaction });
       }
+    } else if (status === 'processing' && order.status === 'pending') {
+      // No inventory changes needed, just status update
+      
+      // Log event for audit purposes
+      logger.info(`Order ${order.order_number} moved to processing status`, {
+        orderId: order.id,
+        userId: req.user.id
+      });
     } else if (status === 'shipped' && order.status === 'processing') {
-      // Move from reserved to consumed
+      // Move from reserved to consumed (reserved quantity is reduced, but stock remains unchanged)
       for (const item of order.items) {
         await db.Inventory.update(
           {
@@ -396,6 +440,34 @@ exports.updateOrderStatus = async (req, res, next) => {
           reference_id: order.id,
           note: `Order ${order.order_number} shipped`,
           user_id: req.user.id
+        }, { transaction });
+      }
+    } else if (status === 'delivered' && order.status === 'shipped') {
+      // Delivery completed - finalize the sale
+      // No inventory changes needed at this point since the stock has already been removed
+      // from reserved_quantity during shipping
+      
+      // Record delivery time
+      await order.update({ 
+        delivery_date: new Date() 
+      }, { transaction });
+      
+      // Create inventory transaction for audit purposes
+      for (const item of order.items) {
+        await db.InventoryTransaction.create({
+          product_id: item.product_id,
+          quantity: 0, // No quantity change, just for tracking
+          transaction_type: 'delivery',
+          reference_id: order.id,
+          note: `Order ${order.order_number} delivered to customer`,
+          user_id: req.user.id
+        }, { transaction });
+      }
+      
+      // If order is not yet paid, update payment status
+      if (order.payment_status === 'pending') {
+        await order.update({ 
+          payment_status: 'paid'
         }, { transaction });
       }
     }

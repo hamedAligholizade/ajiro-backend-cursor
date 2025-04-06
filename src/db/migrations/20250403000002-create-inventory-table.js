@@ -101,7 +101,7 @@ module.exports = {
         allowNull: false
       },
       transaction_type: {
-        type: DataTypes.ENUM('purchase', 'sale', 'adjustment', 'return', 'transfer'),
+        type: DataTypes.ENUM('purchase', 'sale', 'adjustment', 'return', 'transfer', 'delivery'),
         allowNull: false
       },
       reference_id: {
