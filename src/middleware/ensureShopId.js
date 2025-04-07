@@ -6,6 +6,7 @@
 
 const ensureShopId = (req, res, next) => {
   try {
+    console.log('ensureShopId middleware' + JSON.stringify(req.body));
     // Skip if shop_id is already provided
     if (req.body && req.body.shop_id) {
       return next();
@@ -19,7 +20,7 @@ const ensureShopId = (req, res, next) => {
     }
     
     // For requests that really need shop_id but don't have it
-    if (req.originalUrl.includes('/api/orders') && req.method === 'POST') {
+    if (req.originalUrl.includes('/api/orders') && req.method === 'POST' && (!req.body.shop_id)) {
       return res.status(400).json({
         success: false,
         error: {

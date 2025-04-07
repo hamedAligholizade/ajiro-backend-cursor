@@ -283,6 +283,7 @@ const schemas = {
 
   // Add order validation schemas
   orderCreate: Joi.object({
+    shop_id: Joi.string().uuid().required(),
     customer_id: Joi.string().uuid().required()
       .messages({
         'string.empty': 'Customer ID is required',

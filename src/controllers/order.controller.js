@@ -157,7 +157,7 @@ exports.createOrder = async (req, res, next) => {
     // Validate required shop_id
     if (!shop_id) {
       await transaction.rollback();
-      return next(new AppError('Shop ID is required', 400, 'SHOP_ID_REQUIRED'));
+      return next(new AppError('Shop ID is required' + JSON.stringify(req.body), 400, 'SHOP_ID_REQUIRED'));
     }
     
     // Check if shop exists

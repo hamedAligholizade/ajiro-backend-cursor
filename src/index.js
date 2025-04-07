@@ -79,7 +79,7 @@ app.use('/api/feedback', authenticateJWT, ensureShopId, feedbackRoutes);
 app.use('/api/orders', authenticateJWT, ensureShopId, orderRoutes);
 app.use('/api/shops', authenticateJWT, shopRoutes);
 app.use('/api/units', authenticateJWT, ensureShopId, unitRoutes);
-app.use('/api/uploads', authenticateJWT, ensureShopId, uploadRoutes);
+app.use('/api/upload', authenticateJWT, ensureShopId, uploadRoutes);
 app.use('/api/shop', authenticateJWT, shopRoutes);
 
 // Health check endpoint
