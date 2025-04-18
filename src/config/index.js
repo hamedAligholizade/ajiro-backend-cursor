@@ -11,7 +11,7 @@ const config = {
     port: process.env.DB_PORT || 5437,
     name: process.env.DB_NAME || 'ajiro',
     user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
+    password: process.env.DB_PASSWORD || '1374Ali!1995',
     dialect: 'postgres',
     logging: process.env.NODE_ENV === 'development'
   },
@@ -50,8 +50,8 @@ const config = {
         },
         contact: {
           name: 'API Support',
-          url: 'https://ajiro.com/support',
-          email: 'support@ajiro.com'
+          url: 'https://ajiro.ir/support',
+          email: 'support@ajiro.ir'
         }
       },
       servers: [
