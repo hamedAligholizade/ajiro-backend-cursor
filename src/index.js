@@ -32,6 +32,7 @@ const orderRoutes = require('./routes/order.routes');
 const shopRoutes = require('./routes/shop.routes');
 const unitRoutes = require('./routes/unit.routes');
 const uploadRoutes = require('./routes/upload.routes');
+const preRegisterRoutes = require('./routes/pre-register.routes');
 
 // Initialize express app
 const app = express();
@@ -81,6 +82,7 @@ app.use('/api/shops', authenticateJWT, shopRoutes);
 app.use('/api/units', authenticateJWT, ensureShopId, unitRoutes);
 app.use('/api/upload', authenticateJWT, ensureShopId, uploadRoutes);
 app.use('/api/shop', authenticateJWT, shopRoutes);
+app.use('/api/pre-register', preRegisterRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
