@@ -83,7 +83,8 @@ module.exports = (sequelize) => {
     tableName: 'pre_registers',
     timestamps: true,
     createdAt: 'created_at',
-    updatedAt: 'updated_at'
+    updatedAt: 'updated_at',
+    paranoid: false,
   });
 
   // Define associations
