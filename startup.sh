@@ -10,7 +10,7 @@ node src/db/migrations/migrate.js up
 
 # Run database seed
 echo "Running database seed..."
-node backend/src/db/seeders/admin-user.seed.js
+node src/db/seeders/admin-user.seed.js
 
 # Start the application
 echo "Starting the application..."
