@@ -10,37 +10,40 @@ const generateToken = async (user, expiresIn = config.jwt.expiresIn) => {
   // Get user's primary shop (owned shop or first accessible shop)
   let primaryShop = null;
   
-  // Check for owned shops first
-  const ownedShop = await db.Shop.findOne({
-    where: {
-      owner_id: user.id,
-      is_active: true
-    }
-  });
-  
-  if (ownedShop) {
-    primaryShop = {
-      id: ownedShop.id,
-      name: ownedShop.name
-    };
-  } else {
-    // Look for shops the user has access to
-    const userShop = await db.UserShop.findOne({
+  // Only look for shop if user is not an admin
+  if (user.role !== 'admin') {
+    // Check for owned shops first
+    const ownedShop = await db.Shop.findOne({
       where: {
-        user_id: user.id,
+        owner_id: user.id,
         is_active: true
-      },
-      include: [{
-        model: db.Shop,
-        as: 'shop'
-      }]
+      }
     });
     
-    if (userShop && userShop.shop) {
+    if (ownedShop) {
       primaryShop = {
-        id: userShop.shop.id,
-        name: userShop.shop.name
+        id: ownedShop.id,
+        name: ownedShop.name
       };
+    } else {
+      // Look for shops the user has access to
+      const userShop = await db.UserShop.findOne({
+        where: {
+          user_id: user.id,
+          is_active: true
+        },
+        include: [{
+          model: db.Shop,
+          as: 'Shop'
+        }]
+      });
+      
+      if (userShop && userShop.Shop) {
+        primaryShop = {
+          id: userShop.Shop.id,
+          name: userShop.Shop.name
+        };
+      }
     }
   }
   
@@ -217,29 +220,33 @@ exports.login = async (req, res, next) => {
     }
 
     // Get user's primary shop
-    const ownedShop = await db.Shop.findOne({
-      where: {
-        owner_id: user.id,
-        is_active: true
-      }
-    });
-
-    // If user doesn't own a shop, check for shops they have access to
-    let shop = ownedShop;
-    if (!shop) {
-      const userShop = await db.UserShop.findOne({
+    let shop = null;
+    if (user.role !== 'admin') {
+      const ownedShop = await db.Shop.findOne({
         where: {
-          user_id: user.id,
+          owner_id: user.id,
           is_active: true
-        },
-        include: [{
-          model: db.Shop,
-          as: 'shop'
-        }]
+        }
       });
-      
-      if (userShop && userShop.shop) {
-        shop = userShop.shop;
+
+      // If user doesn't own a shop, check for shops they have access to
+      if (!ownedShop) {
+        const userShop = await db.UserShop.findOne({
+          where: {
+            user_id: user.id,
+            is_active: true
+          },
+          include: [{
+            model: db.Shop,
+            as: 'Shop'
+          }]
+        });
+        
+        if (userShop && userShop.Shop) {
+          shop = userShop.Shop;
+        }
+      } else {
+        shop = ownedShop;
       }
     }
 
