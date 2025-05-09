@@ -1,8 +1,27 @@
 const express = require('express');
 const { validate } = require('../middleware/validationMiddleware');
 const preRegisterController = require('../controllers/pre-register.controller');
+const { authenticate, restrictTo } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/pre-register:
+ *   get:
+ *     summary: Get all pre-registered users
+ *     tags: [Pre-Registration]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of pre-registered users
+ *       401:
+ *         description: Not authenticated
+ *       403:
+ *         description: Not authorized (admin only)
+ */
+router.get('/', authenticate, restrictTo('admin'), preRegisterController.getPreRegisters);
 
 /**
  * @swagger

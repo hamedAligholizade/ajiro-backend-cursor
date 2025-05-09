@@ -2,6 +2,25 @@ const { AppError } = require('../middleware/errorHandler');
 const db = require('../models');
 
 /**
+ * Get all pre-registered users
+ * @route GET /api/pre-register
+ */
+exports.getPreRegisters = async (req, res, next) => {
+  try {
+    const preRegisters = await db.PreRegister.findAll({
+      order: [['created_at', 'DESC']]
+    });
+
+    res.status(200).json({
+      success: true,
+      data: preRegisters
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Handle pre-registration
  * @route POST /api/pre-register
  */
