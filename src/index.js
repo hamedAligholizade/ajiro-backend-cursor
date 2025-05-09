@@ -66,7 +66,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/users', authenticateJWT, userRoutes);
 
 // Apply ensureShopId middleware to routes that need shop_id
 app.use('/api/customers', authenticateJWT, ensureShopId, customerRoutes);
